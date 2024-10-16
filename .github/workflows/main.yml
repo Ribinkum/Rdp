@@ -37,9 +37,21 @@ jobs:
       id: ngrok
       run: .\ngrok-v3-stable-windows-amd64\ngrok.exe tcp 3389 --log=stdout --log-format=json > ngrok.log &
     
-    - name: Get ngrok URL
+    - name: Wait for ngrok to start and get URL
       run: |
-        Start-Sleep -Seconds 5  # Wait for ngrok to initialize
-        $json = Get-Content ngrok.log | ConvertFrom-Json
-        $public_url = $json.url
-        Write-Host "ngrok public URL: $public_url"
+        $retries = 10
+        while ($retries -gt 0) {
+          if (Test-Path -Path "ngrok.log") {
+            $json = Get-Content ngrok.log | ConvertFrom-Json
+            $public_url = $json.url
+            Write-Host "ngrok public URL: $public_url"
+            break
+          } else {
+            Start-Sleep -Seconds 3
+            $retries--
+          }
+        }
+
+        if ($retries -eq 0) {
+          Write-Host "ngrok failed to start or log file not found."
+        }
